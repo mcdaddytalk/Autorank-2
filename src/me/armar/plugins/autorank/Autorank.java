@@ -131,6 +131,7 @@ public class Autorank extends JavaPlugin {
         // Make sure all tasks are cancelled after shutdown. This seems obvious,
         // but when a player /reloads, the server creates an instance of the
         // plugin which causes duplicate tasks to run.
+
         this.debugMessage("Shutting down all pending tasks.");
         getServer().getScheduler().cancelTasks(this);
 
@@ -141,7 +142,9 @@ public class Autorank extends JavaPlugin {
         this.getPlayTimeStorageManager().saveAllStorageProviders();
 
         this.debugMessage("Saving storage files of UUIDs");
-        getUUIDStorage().saveAllFiles();
+        if (getUUIDStorage() != null) {
+            getUUIDStorage().saveAllFiles();
+        }
 
         // ------------- Say bye-bye -------------
 
@@ -253,6 +256,9 @@ public class Autorank extends JavaPlugin {
         this.getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
             @Override
             public void run() {
+
+                debugMessage("Loading UUID storage");
+
                 // Load UUID files
                 getUUIDStorage().loadStorageFiles();
             }
@@ -274,19 +280,25 @@ public class Autorank extends JavaPlugin {
         CompletableFuture<Void> loadFlatFileTask =
                 flatFileStorageProvider.initialiseProvider().thenAccept(loaded -> {
                     if (!loaded) {
+                        debugMessage("Could not load flatfile storage.");
+
                         // Something went wrong when initialising.
-                        this.getWarningManager().registerWarning("Could not initiliase flatfile " +
+                        this.getWarningManager().registerWarning("Could not initialise flatfile " +
                                         "storage!",
                                 WarningManager.HIGH_PRIORITY_WARNING);
                         return;
                     }
+
+                    debugMessage("Successfully loaded flatfile storage.");
 
                     // Register FlatFile storage provider
                     getPlayTimeStorageManager().registerStorageProvider(flatFileStorageProvider);
                 });
 
 
-        CompletableFuture<Void> loadMySQLTask = new CompletableFuture<>();
+        // Create empty future. Not that we need to give it some runnable, otherwise it might block a chain of futures.
+        CompletableFuture<Void> loadMySQLTask = CompletableFuture.runAsync(() -> {
+        });
 
         // Load MySQL database if needed.
         if (this.getSettingsConfig().useMySQL()) {
@@ -298,6 +310,8 @@ public class Autorank extends JavaPlugin {
             loadMySQLTask = mysqlStorageProvider.initialiseProvider().thenAccept(loaded -> {
                 // Only register the mysql storage provider if it is loaded.
                 if (loaded) {
+                    debugMessage("Successfully loaded MySQL storage.");
+
                     // Register MySQL storage provider
                     getPlayTimeStorageManager().registerStorageProvider(mysqlStorageProvider);
 
@@ -306,6 +320,8 @@ public class Autorank extends JavaPlugin {
                         getPlayTimeStorageManager().setPrimaryStorageProvider(mysqlStorageProvider);
                     }
                 } else {
+                    debugMessage("Could not load MySQL storage.");
+
                     // Admin wanted to use MySQL, but the storage provider could not be loaded. Warn the admin.
                     this.getWarningManager().registerWarning("The MySQL storage provider could not be started. Check " +
                             "for errors!", WarningManager.HIGH_PRIORITY_WARNING);
@@ -381,9 +397,18 @@ public class Autorank extends JavaPlugin {
 
         // Run task that updates storage providers if something changed.
         getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
-            if (!getSettingsConfig().shouldRemoveOldEntries()) return;
 
-            if (!getInternalPropertiesConfig().isConvertedToNewFormat()) return;
+            debugMessage("Periodically run task to remove purge old entries");
+
+            if (!getSettingsConfig().shouldRemoveOldEntries()) {
+                debugMessage("Purging entries is forbidden by configuration, so aborting.");
+                return;
+            }
+
+            if (!getInternalPropertiesConfig().isConvertedToNewFormat()) {
+                debugMessage("Autorank isn't using newest formatting of UUIDs yet, so aborting.");
+                return;
+            }
 
             // Remove old entries
             int removed = getPlayTimeStorageManager().getPrimaryStorageProvider().purgeOldEntries();
@@ -434,6 +459,8 @@ public class Autorank extends JavaPlugin {
             @Override
             public void run() {
 
+                debugMessage("Trying to convert data to new format (if needed)");
+
                 // Convert to new format (Autorank 4.0) if needed
                 if (!getInternalPropertiesConfig().isConvertedToNewFormat()) {
                     getDataConverter().convertData();
@@ -443,6 +470,9 @@ public class Autorank extends JavaPlugin {
 
         // Do calendar check periodically.
         getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+
+            debugMessage("Checking if new a day has arrived so the playerdata should be reset.");
+
             // Do calendar check to see if we should reset playtime of players.
             this.getPlayTimeStorageManager().doCalendarCheck();
         }, AutorankTools.TICKS_PER_MINUTE * 1, AutorankTools.TICKS_PER_MINUTE * 10);
