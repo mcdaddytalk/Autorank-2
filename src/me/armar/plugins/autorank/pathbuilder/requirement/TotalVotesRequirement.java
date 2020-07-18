@@ -1,9 +1,6 @@
 package me.armar.plugins.autorank.pathbuilder.requirement;
 
 import me.armar.plugins.autorank.language.Lang;
-import me.armar.plugins.autorank.statsmanager.StatsPlugin;
-import me.armar.plugins.autorank.statsmanager.query.StatisticQuery;
-import me.armar.plugins.autorank.statsmanager.query.parameter.ParameterType;
 import me.staartvin.utils.pluginlibrary.Library;
 
 import java.util.UUID;
@@ -27,21 +24,14 @@ public class TotalVotesRequirement extends AbstractRequirement {
 
     @Override
     public String getProgressString(UUID uuid) {
-        final int votes = getStatsPlugin().getNormalStat(StatsPlugin.StatType.VOTES, uuid,
-                StatisticQuery.makeStatisticQuery(ParameterType.WORLD.getKey(), this.getWorld()));
+        final int votes = this.getStatisticsManager().getTimesVoted(uuid);
 
         return votes + "/" + totalVotes;
     }
 
     @Override
     protected boolean meetsRequirement(UUID uuid) {
-        if (!getStatsPlugin().isEnabled())
-            return false;
-
-        final int votes = getStatsPlugin().getNormalStat(StatsPlugin.StatType.VOTES, uuid,
-                StatisticQuery.makeStatisticQuery(ParameterType.WORLD.getKey(), this.getWorld()));
-
-        return votes >= totalVotes;
+        return this.getStatisticsManager().getTimesVoted(uuid) >= totalVotes;
     }
 
     @Override
@@ -68,8 +58,7 @@ public class TotalVotesRequirement extends AbstractRequirement {
 
     @Override
     public double getProgressPercentage(UUID uuid) {
-        final int votes = getStatsPlugin().getNormalStat(StatsPlugin.StatType.VOTES, uuid,
-                StatisticQuery.makeStatisticQuery(ParameterType.WORLD.getKey(), this.getWorld()));
+        final int votes = this.getStatisticsManager().getTimesVoted(uuid);
 
         return votes * 1.0d / totalVotes;
     }

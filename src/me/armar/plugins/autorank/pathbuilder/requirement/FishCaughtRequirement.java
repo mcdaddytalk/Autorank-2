@@ -1,10 +1,6 @@
 package me.armar.plugins.autorank.pathbuilder.requirement;
 
 import me.armar.plugins.autorank.language.Lang;
-import me.armar.plugins.autorank.statsmanager.StatsPlugin;
-import me.armar.plugins.autorank.statsmanager.query.StatisticQuery;
-import me.armar.plugins.autorank.statsmanager.query.parameter.ParameterType;
-import me.staartvin.utils.pluginlibrary.Library;
 
 import java.util.UUID;
 
@@ -27,29 +23,18 @@ public class FishCaughtRequirement extends AbstractRequirement {
 
     @Override
     public String getProgressString(UUID uuid) {
-        final int progressBar = this.getStatsPlugin().getNormalStat(StatsPlugin.StatType.FISH_CAUGHT,
-                uuid, StatisticQuery.makeStatisticQuery(ParameterType.WORLD.getKey(), this.getWorld()));
+        final int progressBar = this.getStatisticsManager().getFishCaught(uuid, this.getWorld());
 
         return progressBar + "/" + fishCaught;
     }
 
     @Override
     protected boolean meetsRequirement(UUID uuid) {
-
-        if (!getStatsPlugin().isEnabled())
-            return false;
-
-        final int fish = this.getStatsPlugin().getNormalStat(StatsPlugin.StatType.FISH_CAUGHT, uuid,
-                StatisticQuery.makeStatisticQuery(ParameterType.WORLD.getKey(), this.getWorld()));
-
-        return fish >= fishCaught;
+        return this.getStatisticsManager().getFishCaught(uuid, this.getWorld()) >= fishCaught;
     }
 
     @Override
     public boolean initRequirement(final String[] options) {
-
-        // Add dependency
-        addDependency(Library.STATZ);
 
         try {
             fishCaught = Integer.parseInt(options[0]);
@@ -68,8 +53,7 @@ public class FishCaughtRequirement extends AbstractRequirement {
 
     @Override
     public double getProgressPercentage(UUID uuid) {
-        final int progressBar = this.getStatsPlugin().getNormalStat(StatsPlugin.StatType.FISH_CAUGHT,
-                uuid, StatisticQuery.makeStatisticQuery(ParameterType.WORLD.getKey(), this.getWorld()));
+        final int progressBar = this.getStatisticsManager().getFishCaught(uuid, this.getWorld());
 
         return progressBar * 1.0d / this.fishCaught;
     }

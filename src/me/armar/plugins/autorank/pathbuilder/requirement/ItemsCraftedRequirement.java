@@ -1,21 +1,20 @@
 package me.armar.plugins.autorank.pathbuilder.requirement;
 
 import me.armar.plugins.autorank.language.Lang;
-import me.armar.plugins.autorank.statsmanager.StatsPlugin;
-import me.armar.plugins.autorank.statsmanager.query.StatisticQuery;
-import me.armar.plugins.autorank.statsmanager.query.parameter.ParameterType;
-import me.staartvin.utils.pluginlibrary.Library;
+import org.bukkit.Material;
 
 import java.util.UUID;
 
 public class ItemsCraftedRequirement extends AbstractRequirement {
 
-    int itemsCrafted = -1;
+    int timesCrafted = -1;
+    Material itemCrafted = null;
 
     @Override
     public String getDescription() {
 
-        String lang = Lang.ITEMS_CRAFTED_REQUIREMENT.getConfigValue(itemsCrafted + "");
+        String lang = itemCrafted == null ? Lang.ITEMS_CRAFTED_REQUIREMENT.getConfigValue(timesCrafted) :
+                Lang.ITEM_CRAFTED_REQUIREMENT.getConfigValue(timesCrafted, itemCrafted);
 
         // Check if this requirement is world-specific
         if (this.isWorldSpecific()) {
@@ -27,38 +26,45 @@ public class ItemsCraftedRequirement extends AbstractRequirement {
 
     @Override
     public String getProgressString(UUID uuid) {
-        final int progressBar = this.getStatsPlugin().getNormalStat(StatsPlugin.StatType.ITEMS_CRAFTED,
-                uuid, StatisticQuery.makeStatisticQuery(ParameterType.WORLD.getKey(), this.getWorld()));
-
-        return progressBar + "/" + itemsCrafted;
+        return this.getStatisticsManager().getItemsCrafted(uuid, this.getWorld(), itemCrafted) + "/" + this.timesCrafted;
     }
 
     @Override
     protected boolean meetsRequirement(UUID uuid) {
-
-        if (!getStatsPlugin().isEnabled())
-            return false;
-
-        final int realItemsCrafted = this.getStatsPlugin().getNormalStat(StatsPlugin.StatType.ITEMS_CRAFTED,
-                uuid, StatisticQuery.makeStatisticQuery(ParameterType.WORLD.getKey(), this.getWorld()));
-
-        return realItemsCrafted >= itemsCrafted;
+        return this.getStatisticsManager().getItemsCrafted(uuid, this.getWorld(), itemCrafted) >= this.timesCrafted;
     }
 
     @Override
     public boolean initRequirement(final String[] options) {
 
-        // Add dependency
-        addDependency(Library.STATZ);
-
-        try {
-            itemsCrafted = Integer.parseInt(options[0]);
-        } catch (NumberFormatException e) {
-            this.registerWarningMessage("An invalid number is provided");
+        if (options.length == 0) {
             return false;
         }
 
-        if (itemsCrafted < 0) {
+        if (options.length == 1) {
+            // Only specified a number, so no specific item.
+
+            try {
+                this.timesCrafted = Integer.parseInt(options[0]);
+            } catch (final Exception e) {
+                this.registerWarningMessage("An invalid number is provided");
+                return false;
+            }
+
+        } else {
+
+            // Specified both a number and a material.
+
+            try {
+                this.itemCrafted = Material.getMaterial(options[0].trim().toUpperCase());
+                this.timesCrafted = Integer.parseInt(options[1]);
+            } catch (final Exception e) {
+                this.registerWarningMessage("An invalid number is provided");
+                return false;
+            }
+        }
+
+        if (timesCrafted < 0) {
             this.registerWarningMessage("No number is provided or smaller than 0.");
             return false;
         }
@@ -68,9 +74,6 @@ public class ItemsCraftedRequirement extends AbstractRequirement {
 
     @Override
     public double getProgressPercentage(UUID uuid) {
-        final int progressBar = this.getStatsPlugin().getNormalStat(StatsPlugin.StatType.ITEMS_CRAFTED,
-                uuid, StatisticQuery.makeStatisticQuery(ParameterType.WORLD.getKey(), this.getWorld()));
-
-        return progressBar * 1.0d / this.itemsCrafted;
+        return this.getStatisticsManager().getItemsCrafted(uuid, this.getWorld(), itemCrafted) * 1.0d / this.timesCrafted;
     }
 }

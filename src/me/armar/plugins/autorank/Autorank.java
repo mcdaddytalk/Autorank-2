@@ -28,8 +28,7 @@ import me.armar.plugins.autorank.pathbuilder.result.*;
 import me.armar.plugins.autorank.permissions.PermissionsPluginManager;
 import me.armar.plugins.autorank.playerchecker.PlayerChecker;
 import me.armar.plugins.autorank.playtimes.PlayTimeManager;
-import me.armar.plugins.autorank.statsmanager.StatsPlugin;
-import me.armar.plugins.autorank.statsmanager.handlers.FallbackHandler;
+import me.armar.plugins.autorank.statsmanager.StatisticsManager;
 import me.armar.plugins.autorank.storage.PlayTimeStorageManager;
 import me.armar.plugins.autorank.storage.PlayTimeStorageProvider;
 import me.armar.plugins.autorank.storage.flatfile.FlatFileStorageProvider;
@@ -89,6 +88,7 @@ public class Autorank extends JavaPlugin {
     private PlayTimeManager playTimeManager;
     private DataConverter dataConverter;
     private MigrationManager migrationManager;
+    private StatisticsManager statisticsManager;
     // UUID storage
     private UUIDStorage uuidStorage;
     private PlayTimeStorageManager playTimeStorageManager;
@@ -218,6 +218,9 @@ public class Autorank extends JavaPlugin {
 
         // Create Task Manager so we can schedule tasks.
         setTaskManager(new TaskManager(this));
+
+        // Create statistics manager so we can gather statistics from third-party plugins.
+        setStatisticsManager(new StatisticsManager(this));
 
         // ------------- Initialize handlers -------------
 
@@ -521,11 +524,11 @@ public class Autorank extends JavaPlugin {
         // Vault related
         RequirementBuilder.registerRequirement("money", MoneyRequirement.class);
 
-        // Statz related
+        // Statistics related
         RequirementBuilder.registerRequirement("blocks broken", BlocksBrokenRequirement.class);
         RequirementBuilder.registerRequirement("blocks placed", BlocksPlacedRequirement.class);
         RequirementBuilder.registerRequirement("blocks moved", BlocksMovedRequirement.class);
-        RequirementBuilder.registerRequirement("votes", TotalVotesRequirement.class);
+        RequirementBuilder.registerRequirement("votes", TotalVotesRequirement.class); // REQUIRES STATZ
         RequirementBuilder.registerRequirement("damage taken", DamageTakenRequirement.class);
         RequirementBuilder.registerRequirement("mobs killed", MobKillsRequirement.class);
         RequirementBuilder.registerRequirement("players killed", PlayerKillsRequirement.class);
@@ -533,6 +536,13 @@ public class Autorank extends JavaPlugin {
         RequirementBuilder.registerRequirement("items crafted", ItemsCraftedRequirement.class);
         RequirementBuilder.registerRequirement("times sheared", TimesShearedRequirement.class);
         RequirementBuilder.registerRequirement("food eaten", FoodEatenRequirement.class);
+        RequirementBuilder.registerRequirement("animals bred", AnimalsBredRequirement.class);
+        RequirementBuilder.registerRequirement("cake slices eaten", CakeSlicesEatenRequirement.class);
+        RequirementBuilder.registerRequirement("items enchanted", ItemsEnchantedRequirement.class);
+        RequirementBuilder.registerRequirement("plants potted", PlantsPottedRequirement.class);
+        RequirementBuilder.registerRequirement("times died", TimesDiedRequirement.class);
+        RequirementBuilder.registerRequirement("traded with villagers", TradedWithVillagersRequirement.class);
+        RequirementBuilder.registerRequirement("item thrown", ItemThrownRequirement.class);
 
         // Faction related
         RequirementBuilder.registerRequirement("faction power", FactionPowerRequirement.class);
@@ -584,22 +594,13 @@ public class Autorank extends JavaPlugin {
         RequirementBuilder.registerRequirement("battlelevels level", BattleLevelsLevelRequirement.class);
         RequirementBuilder.registerRequirement("battlelevels score", BattleLevelsScoreRequirement.class);
 
-        // Quests (HappyPikachu)
+        // Quests (HappyPikachu or LMBishop)
         RequirementBuilder.registerRequirement("quests quest points", QuestsQuestPointsRequirement.class);
         RequirementBuilder.registerRequirement("quests complete quest",
                 QuestsCompleteSpecificQuestRequirement.class);
         RequirementBuilder.registerRequirement("quests active quests", QuestsActiveQuestsRequirement.class);
         RequirementBuilder.registerRequirement("quests completed quests", QuestsCompletedQuestsRequirement
                 .class);
-
-        // Quests (fatpigsarefat)
-        RequirementBuilder.registerRequirement("quests fatpigsarefat complete quest",
-                QuestsAlternativeCompleteSpecificQuestRequirement.class);
-        RequirementBuilder.registerRequirement("quests fatpigsarefat completed quests",
-                QuestsAlternativeCompletedQuestsRequirement.class);
-        RequirementBuilder.registerRequirement("quests fatpigsarefat active quests",
-                QuestsAlternativeActiveQuestsRequirement
-                        .class);
 
         // SavageFactions
         RequirementBuilder.registerRequirement("savagefactions faction power",
@@ -656,16 +657,6 @@ public class Autorank extends JavaPlugin {
 
         this.getServer().getConsoleSender()
                 .sendMessage("[Autorank DEBUG] " + ChatColor.translateAlternateColorCodes('&', message));
-    }
-
-    /**
-     * Get the current {@linkplain StatsPlugin} that is hooked.
-     *
-     * @return current {@linkplain StatsPlugin} that is hooked or
-     * {@linkplain FallbackHandler} if no stats plugin is found.
-     */
-    public StatsPlugin getHookedStatsPlugin() {
-        return getDependencyManager().getStatsPlugin();
     }
 
     /**
@@ -902,5 +893,13 @@ public class Autorank extends JavaPlugin {
 
     public void setLoggerManager(LoggerManager loggerManager) {
         this.loggerManager = loggerManager;
+    }
+
+    public StatisticsManager getStatisticsManager() {
+        return statisticsManager;
+    }
+
+    public void setStatisticsManager(StatisticsManager statisticsManager) {
+        this.statisticsManager = statisticsManager;
     }
 }

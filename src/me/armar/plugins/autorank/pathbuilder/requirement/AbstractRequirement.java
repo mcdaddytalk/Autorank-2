@@ -4,7 +4,7 @@ import io.reactivex.annotations.NonNull;
 import me.armar.plugins.autorank.Autorank;
 import me.armar.plugins.autorank.hooks.DependencyManager;
 import me.armar.plugins.autorank.pathbuilder.result.AbstractResult;
-import me.armar.plugins.autorank.statsmanager.StatsPlugin;
+import me.armar.plugins.autorank.statsmanager.StatisticsManager;
 import me.staartvin.utils.pluginlibrary.Library;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -84,7 +84,7 @@ public abstract class AbstractRequirement {
 
     /**
      * Get the id of this requirement. This should get assigned automatically at
-     * setOptions(). The id should always be dynamic.
+     * {@link #initRequirement(String[])}. The id should always be dynamic.
      *
      * @return id
      */
@@ -125,8 +125,8 @@ public abstract class AbstractRequirement {
      *
      * @return stats plugin that Autorank uses for stat storage
      */
-    public StatsPlugin getStatsPlugin() {
-        return getAutorank().getHookedStatsPlugin();
+    public StatisticsManager getStatisticsManager() {
+        return getAutorank().getStatisticsManager();
     }
 
     /**
@@ -331,7 +331,8 @@ public abstract class AbstractRequirement {
 
 
     /**
-     * Get a list of dependencies (third-party plugins) this requirement uses.
+     * Get a list of dependencies (third-party plugins) this requirement uses. The semantics of this list indicate
+     * that at least one of these dependencies should be available, not necessarily all of them.
      *
      * @return a list of dependencies of this requirement.
      */

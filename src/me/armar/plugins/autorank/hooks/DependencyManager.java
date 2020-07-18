@@ -1,16 +1,19 @@
 package me.armar.plugins.autorank.hooks;
 
 import me.armar.plugins.autorank.Autorank;
+import me.armar.plugins.autorank.hooks.quests.Quests;
+import me.armar.plugins.autorank.hooks.quests.QuestsPlugin;
 import me.armar.plugins.autorank.hooks.statzapi.StatzAPIHandler;
-import me.armar.plugins.autorank.statsmanager.StatsPlugin;
-import me.armar.plugins.autorank.statsmanager.StatsPluginManager;
 import me.staartvin.utils.pluginlibrary.Library;
 import me.staartvin.utils.pluginlibrary.PluginLibrary;
 import me.staartvin.utils.pluginlibrary.hooks.LibraryHook;
+import me.staartvin.utils.pluginlibrary.hooks.QuestsAlternative;
+import me.staartvin.utils.pluginlibrary.hooks.QuestsHook;
 import me.staartvin.utils.pluginlibrary.hooks.afkmanager.AFKManager;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
+import java.util.Optional;
 
 /**
  * This class is used for loading all the dependencies Autorank has. <br>
@@ -20,29 +23,9 @@ import java.util.HashMap;
  */
 public class DependencyManager {
 
-    /**
-     * Enum containing all dependencies Autorank has.<br>
-     * Some are optional, some not. This enumeration is used to dynamically load
-     * the dependencies.<br>
-     * Autorank is also included because this enum is used for methods that
-     * require the own plugin.
-     *
-     * @author Staartvin
-     */
-    public enum AutorankDependency {
-        AUTORANK,
-        ONTIME,
-        STATS,
-        STATZ,
-    }
-
     private final HashMap<AutorankDependency, DependencyHandler> handlers = new HashMap<AutorankDependency,
             DependencyHandler>();
-
     private final Autorank plugin;
-
-    private final StatsPluginManager statsPluginManager;
-
     private PluginLibrary pluginLibrary;
 
     public DependencyManager(final Autorank instance) {
@@ -52,8 +35,6 @@ public class DependencyManager {
         handlers.put(AutorankDependency.STATZ, new StatzAPIHandler(instance));
 
         this.loadPluginLibrary();
-
-        statsPluginManager = new StatsPluginManager(instance);
     }
 
     /**
@@ -73,13 +54,6 @@ public class DependencyManager {
     }
 
     /**
-     * Get the installed Stats plugin that Autorank uses.
-     */
-    public StatsPlugin getStatsPlugin() {
-        return statsPluginManager.getStatsPlugin();
-    }
-
-    /**
      * Check whether the given player is AFK. <br>
      * Obeys the AFK setting in the Settings.yml.
      *
@@ -92,10 +66,12 @@ public class DependencyManager {
         }
 
         for (Library library : Library.values()) {
-            LibraryHook libraryHook = this.getLibraryHook(library);
+            Optional<LibraryHook> optional = this.getLibraryHook(library);
 
             // It seems that the library is not loaded.
-            if (libraryHook == null) continue;
+            if (!optional.isPresent()) continue;
+
+            LibraryHook libraryHook = optional.get();
 
             // If this plugin cannot check for AFK, skip it.
             if (!(libraryHook instanceof AFKManager)) continue;
@@ -139,7 +115,7 @@ public class DependencyManager {
         }
 
         // Search a stats plugin.
-        statsPluginManager.searchStatsPlugin();
+        this.plugin.getStatisticsManager().loadAvailableStatsPlugins();
 
         if (plugin.getSettingsConfig().useAdvancedDependencyLogs()) {
             // Make seperate stop loading bar
@@ -173,12 +149,12 @@ public class DependencyManager {
      * @param library library to get
      * @return hook used by PluginLibrary (if available) or null if not found.
      */
-    public LibraryHook getLibraryHook(Library library) {
-        if (library == null) return null;
+    public Optional<LibraryHook> getLibraryHook(Library library) {
+        if (library == null) return Optional.empty();
 
-        if (!this.isPluginLibraryLoaded()) return null;
+        if (!this.isPluginLibraryLoaded()) return Optional.empty();
 
-        return PluginLibrary.getLibrary(library);
+        return Optional.of(PluginLibrary.getLibrary(library));
     }
 
     /**
@@ -193,13 +169,10 @@ public class DependencyManager {
 
         if (library == null) return false;
 
-        LibraryHook hook = this.getLibraryHook(library);
+        Optional<LibraryHook> hook = this.getLibraryHook(library);
 
-        if (hook == null) {
-            return false;
-        }
+        return hook.filter(libraryHook -> LibraryHook.isPluginAvailable(library) && libraryHook.isHooked()).isPresent();
 
-        return LibraryHook.isPluginAvailable(library) && hook.isHooked();
     }
 
     private boolean loadPluginLibrary() {
@@ -210,6 +183,33 @@ public class DependencyManager {
 
     public boolean isPluginLibraryLoaded() {
         return pluginLibrary != null;
+    }
+
+    public Optional<QuestsPlugin> getQuestsPlugin() {
+        if (isAvailable(Library.QUESTS)) {
+            return Optional.of(new Quests((QuestsHook) PluginLibrary.getLibrary(Library.QUESTS)));
+        } else if (isAvailable(Library.QUESTS_ALTERNATIVE)) {
+            return Optional.of(new me.armar.plugins.autorank.hooks.quests.QuestsAlternative((QuestsAlternative)
+                    PluginLibrary.getLibrary(Library.QUESTS_ALTERNATIVE)));
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Enum containing all dependencies Autorank has.<br>
+     * Some are optional, some not. This enumeration is used to dynamically load
+     * the dependencies.<br>
+     * Autorank is also included because this enum is used for methods that
+     * require the own plugin.
+     *
+     * @author Staartvin
+     */
+    public enum AutorankDependency {
+        AUTORANK,
+        ONTIME,
+        STATS,
+        STATZ,
     }
 
 }

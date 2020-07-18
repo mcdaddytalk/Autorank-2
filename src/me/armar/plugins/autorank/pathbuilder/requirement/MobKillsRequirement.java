@@ -1,10 +1,6 @@
 package me.armar.plugins.autorank.pathbuilder.requirement;
 
 import me.armar.plugins.autorank.language.Lang;
-import me.armar.plugins.autorank.statsmanager.StatsPlugin;
-import me.armar.plugins.autorank.statsmanager.query.StatisticQuery;
-import me.armar.plugins.autorank.statsmanager.query.parameter.ParameterType;
-import me.staartvin.utils.pluginlibrary.Library;
 import org.bukkit.entity.EntityType;
 
 import java.util.UUID;
@@ -37,10 +33,19 @@ public class MobKillsRequirement extends AbstractRequirement {
     @Override
     public String getProgressString(UUID uuid) {
 
-        final int killed = getStatsPlugin().getNormalStat(StatsPlugin.StatType.MOBS_KILLED, uuid,
-                StatisticQuery.makeStatisticQuery(
-                        ParameterType.WORLD.getKey(), this.getWorld(),
-                        ParameterType.MOB_TYPE.getKey(), mobType));
+        EntityType type = null;
+
+        int killed = 0;
+
+        try {
+            type = EntityType.valueOf(this.mobType);
+        } catch (Exception e) {
+            killed = this.getStatisticsManager().getMobsKilled(uuid, this.getWorld(), null);
+        }
+
+        if (type != null) {
+            killed = this.getStatisticsManager().getMobsKilled(uuid, this.getWorld(), type);
+        }
 
         String entityType = mobType;
 
@@ -54,23 +59,25 @@ public class MobKillsRequirement extends AbstractRequirement {
     @Override
     protected boolean meetsRequirement(UUID uuid) {
 
-        if (!this.getStatsPlugin().isEnabled())
-            return false;
+        EntityType type = null;
 
-        final int killed = getStatsPlugin().getNormalStat(StatsPlugin.StatType.MOBS_KILLED, uuid,
-                StatisticQuery.makeStatisticQuery(
-                        ParameterType.WORLD.getKey(), this.getWorld(),
-                        ParameterType.MOB_TYPE.getKey(), mobType));
+        int killed = 0;
+
+        try {
+            type = EntityType.valueOf(this.mobType);
+        } catch (Exception e) {
+            killed = this.getStatisticsManager().getMobsKilled(uuid, this.getWorld(), null);
+        }
+
+        if (type != null) {
+            killed = this.getStatisticsManager().getMobsKilled(uuid, this.getWorld(), type);
+        }
 
         return killed >= totalMobsKilled;
     }
 
     @Override
     public boolean initRequirement(final String[] options) {
-
-        // Add dependency
-        addDependency(Library.STATZ);
-
         totalMobsKilled = Integer.parseInt(options[0]);
 
         if (options.length > 1) {
@@ -99,10 +106,19 @@ public class MobKillsRequirement extends AbstractRequirement {
 
     @Override
     public double getProgressPercentage(UUID uuid) {
-        final int killed = getStatsPlugin().getNormalStat(StatsPlugin.StatType.MOBS_KILLED, uuid,
-                StatisticQuery.makeStatisticQuery(
-                        ParameterType.WORLD.getKey(), this.getWorld(),
-                        ParameterType.MOB_TYPE.getKey(), mobType));
+        EntityType type = null;
+
+        int killed = 0;
+
+        try {
+            type = EntityType.valueOf(this.mobType);
+        } catch (Exception e) {
+            killed = this.getStatisticsManager().getMobsKilled(uuid, this.getWorld(), null);
+        }
+
+        if (type != null) {
+            killed = this.getStatisticsManager().getMobsKilled(uuid, this.getWorld(), type);
+        }
 
         return killed * 1.0d / this.totalMobsKilled;
     }

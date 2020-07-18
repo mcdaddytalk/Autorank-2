@@ -3,8 +3,6 @@ package me.armar.plugins.autorank.commands;
 import me.armar.plugins.autorank.Autorank;
 import me.armar.plugins.autorank.commands.manager.AutorankCommand;
 import me.armar.plugins.autorank.permissions.AutorankPermission;
-import me.armar.plugins.autorank.statsmanager.StatsPlugin;
-import me.armar.plugins.autorank.statsmanager.query.StatisticQuery;
 import me.armar.plugins.autorank.storage.TimeType;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -30,11 +28,6 @@ public class SyncStatsCommand extends AutorankCommand {
         if (!this.hasPermission(AutorankPermission.SYNC_STATS_DATA, sender))
             return true;
 
-        if (!plugin.getHookedStatsPlugin().isEnabled()) {
-            sender.sendMessage(ChatColor.RED + "Stats is not enabled!");
-            return true;
-        }
-
         int count = 0;
 
         // Sync playtime of every player
@@ -43,16 +36,15 @@ public class SyncStatsCommand extends AutorankCommand {
 
             final OfflinePlayer p = plugin.getServer().getOfflinePlayer(uuid);
 
-            // Time is stored in seconds
-            final int statsPlayTime = plugin.getHookedStatsPlugin().getNormalStat(StatsPlugin.StatType.TIME_PLAYED,
-                    p.getUniqueId(), StatisticQuery.makeStatisticQuery());
+            // Time is stored in minutes
+            final int statsPlayTime = plugin.getStatisticsManager().getTimePlayed(uuid, null);
 
             if (statsPlayTime <= 0) {
                 continue;
             }
 
             // Update time
-            plugin.getPlayTimeStorageManager().setPlayerTime(TimeType.TOTAL_TIME, uuid, Math.round(statsPlayTime / 60));
+            plugin.getPlayTimeStorageManager().setPlayerTime(TimeType.TOTAL_TIME, uuid, statsPlayTime);
 
             // Increment count
             count++;

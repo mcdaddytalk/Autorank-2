@@ -1,10 +1,6 @@
 package me.armar.plugins.autorank.pathbuilder.requirement;
 
 import me.armar.plugins.autorank.language.Lang;
-import me.armar.plugins.autorank.statsmanager.StatsPlugin;
-import me.armar.plugins.autorank.statsmanager.query.StatisticQuery;
-import me.armar.plugins.autorank.statsmanager.query.parameter.ParameterType;
-import me.staartvin.utils.pluginlibrary.Library;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
@@ -45,16 +41,16 @@ public class FoodEatenRequirement extends AbstractRequirement {
         final int amount = foodEaten.getAmount();
         String foodType = foodEaten.getFoodName();
 
-        final int totalFoodEaten = getStatsPlugin().getNormalStat(StatsPlugin.StatType.FOOD_EATEN,
-                uuid,
-                StatisticQuery.makeStatisticQuery(
-                        ParameterType.WORLD.getKey(), this.getWorld(),
-                        ParameterType.FOOD_TYPE.getKey(), foodType));
+        int totalFoodEaten = 0;
 
-        if (foodType == null) {
-            foodType = "food";
-        } else {
+        if (foodType != null) {
+            totalFoodEaten = this.getStatisticsManager().getFoodEaten(uuid, this.getWorld(),
+                    Material.getMaterial(foodType));
             foodType = foodType.toLowerCase();
+        } else {
+            totalFoodEaten = this.getStatisticsManager().getFoodEaten(uuid, this.getWorld(),
+                    null);
+            foodType = "food";
         }
 
         progress = progress.concat(totalFoodEaten + "/" + amount + " " + foodType.replace("_", " ") + "(s)");
@@ -64,27 +60,23 @@ public class FoodEatenRequirement extends AbstractRequirement {
 
     @Override
     protected boolean meetsRequirement(UUID uuid) {
-
-        if (!this.getStatsPlugin().isEnabled())
-            return false;
-
         final int amount = foodEaten.getAmount();
         final String foodType = foodEaten.getFoodName();
 
-        final int totalFoodEaten = getStatsPlugin().getNormalStat(StatsPlugin.StatType.FOOD_EATEN,
-                uuid, StatisticQuery.makeStatisticQuery(
-                        ParameterType.WORLD.getKey(), this.getWorld(),
-                        ParameterType.FOOD_TYPE.getKey(), foodType));
+        int totalFoodEaten = 0;
+
+        if (foodType == null) {
+            totalFoodEaten = this.getStatisticsManager().getFoodEaten(uuid, this.getWorld(), null);
+        } else {
+            totalFoodEaten = this.getStatisticsManager().getFoodEaten(uuid, this.getWorld(),
+                    Material.getMaterial(foodType));
+        }
 
         return totalFoodEaten >= amount;
     }
 
     @Override
     public boolean initRequirement(final String[] options) {
-
-        // Add dependency
-        addDependency(Library.STATZ);
-
         final int total = Integer.parseInt(options[0]);
         String foodType = "";
 
@@ -106,10 +98,15 @@ public class FoodEatenRequirement extends AbstractRequirement {
 
     @Override
     public double getProgressPercentage(UUID uuid) {
-        final int totalFoodEaten = getStatsPlugin().getNormalStat(StatsPlugin.StatType.FOOD_EATEN,
-                uuid, StatisticQuery.makeStatisticQuery(
-                        ParameterType.WORLD.getKey(), this.getWorld(),
-                        ParameterType.FOOD_TYPE.getKey(), foodEaten.getFoodName()));
+        int totalFoodEaten = 0;
+
+        String foodType = foodEaten.getFoodName();
+
+        if (foodType == null) {
+            totalFoodEaten = this.getStatisticsManager().getFoodEaten(uuid, this.getWorld(), null);
+        } else {
+            totalFoodEaten = this.getStatisticsManager().getFoodEaten(uuid, this.getWorld(), Material.getMaterial(foodType));
+        }
 
         return totalFoodEaten * 1.0d / foodEaten.getAmount();
     }
